@@ -99,6 +99,7 @@
       cron:
         name: "run cron job"
         hour: "4,16"
+        minute: "10"
         job: "/usr/bin/cron-qubes.sh"
       tags:
         - cron
