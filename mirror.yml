@@ -1,0 +1,104 @@
+---
+- hosts: mirror
+  become: True
+  vars:
+    domain: "mirrors.dgplug.org"
+    email: "anwesha@das.community"
+  tasks:
+    - name: install epel-release
+      yum:
+        name: "epel-release"
+        state: latest
+
+    - name: install nginx
+      yum:
+        name: "nginx"
+        state: latest
+
+    - name: make sure well known directory exists
+      file:
+        path: "/var/www/{{ domain }}/.well-known"
+        state: directory
+        mode: 0755
+
+    - name: install iptables-services
+      yum:
+        name: "iptables-services"
+        state: latest
+      tags: 
+        - firewall
+
+    - name: Copy iptables rules
+      copy:
+        src: "iptables"
+        dest: /etc/sysconfig/iptables 
+      tags:
+        - firewall
+        
+
+    - name: Start iptables
+      systemd:
+        name: iptables
+        state: started
+        enabled: yes
+      tags:
+        - firewall
+    
+    - name: Install certbot
+      yum:
+        name: "certbot"
+        state: latest
+      tags: 
+        - certbot
+    
+    - name: Check if certificate exists
+      stat: 
+        path: "/etc/letsencrypt/live/{{ domain }}/cert.pem"
+      register: letscert
+      tags:
+        - certbot
+
+    - name: Stop nginx
+      systemd:
+        name: nginx
+        state: stopped
+      tags:
+        - certbot
+    
+    - name: Get the certbot  certificate
+      shell: certbot certonly --standalone  --noninteractive --agree-tos --email {{ email }} -d {{ domain }} 
+      when: not letscert.stat.exists
+      tags:
+        - certbot
+
+    - name: Install nginx configuration
+      template:  
+        src: nginx.conf.j2
+        dest: /etc/nginx/conf.d/{{ domain }}.conf
+      tags:
+        - nginx
+
+    - name: Restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+        enabled: yes
+      tags:
+        - nginx
+      
+
+    - name: Copy cron qubes shell script
+      copy:
+        src: "cron-qubes.sh"
+        dest: "/usr/bin/cron-qubes.sh"
+        mode: 0700
+      tags:
+        - cron
+      
+    - name: Enable cron job
+      cron:
+        name: "run cron job"
+        hour: "4,16"
+        job: "/usr/bin/cron-qubes.sh"
+      tags:
+        - cron

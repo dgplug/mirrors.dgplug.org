@@ -1,0 +1,7 @@
+[mirror]
+mirrors.dgplug.org
+
+
+[mirror:vars]
+anisible_user = adas
+
