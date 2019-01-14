@@ -35,6 +35,14 @@
       tags:
         - firewall
         
+    - name: Stop firewalld
+      systemd:
+        name: firewalld
+        state: stopped
+        enabled: no
+      tags:
+        - firewall
+        
 
     - name: Start iptables
       systemd:
